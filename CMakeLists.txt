@@ -20,12 +20,15 @@ add_executable(kvstore
     src/resp.cpp
 )
 
-add_executable(main
-    src/main.cpp
-)
-
 target_include_directories(kvstore PRIVATE src)
-target_include_directories(main PRIVATE src)
 
 target_link_libraries(kvstore PRIVATE nlohmann_json::nlohmann_json)
-target_link_libraries(main PRIVATE nlohmann_json::nlohmann_json)
+
+enable_testing()
+
+add_executable(test_server
+    tests/test_server.cpp
+    src/server.cpp
+)
+target_include_directories(test_server PRIVATE src)
+add_test(NAME server_tests COMMAND test_server)

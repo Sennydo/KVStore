@@ -14,5 +14,8 @@ int main() {
         }
         )");
     cout << ex1 << endl;
+
+    Server server(7789, 4);
+    server.start();
     return 0;
 }
