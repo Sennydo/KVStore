@@ -3,6 +3,9 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <unistd.h>
+#include "resp.h"
+#include <cctype>
+using namespace std;
 
 Server::Server(int port, size_t numWorkers)
     : port(port), server_fd(-1) {
@@ -95,12 +98,79 @@ void Server::stop() {
     }
 }
 
+std::string Server::dispatch(const std::vector<std::string>& cmd, Store& store) {
+
+    if (cmd.empty()) {
+        return encodeError("ERR empty command");
+    }
+
+    // Placeholder: just echo the command back as a RESP array
+    string op = cmd[0];
+    op[0] = toupper(static_cast<unsigned char>(op[0])); // case-insensitive command handling
+
+    if (op == "GET") {
+        if (cmd.size() != 2) {
+            return encodeError("ERR wrong number of arguments for GET");
+        }
+        auto val = store.get(cmd[1]);
+        if (val) {
+            return encodeBulkString(*val);
+        }
+        return encodeBulkNullString();
+    }
+    else if (op == "SET") {
+        if (cmd.size() != 3) {
+            return encodeError("ERR wrong number of arguments for SET");
+        }
+        store.set(cmd[1], cmd[2]);
+        return encodeSimpleString("OK");
+    }
+
+    else if (op == "DEL") {
+        if (cmd.size() != 2) {
+            return encodeError("ERR wrong number of arguments for DEL");
+        }
+        bool deleted = store.del(cmd[1]);
+        return encodeInteger(deleted ? 1 : 0);
+    }
+
+    else if (op == "PING") {
+        if (cmd.size() != 1) {
+            return encodeError("ERR wrong number of arguments for PING");
+        }
+        return encodeSimpleString("PONG");
+    }
+
+}
+
 void Server::handleClient(int client_fd) {
-    char buf[4096];
+    string buffer;
+    char chunk[4096];
     while (true) {
-        ssize_t n = recv(client_fd, buf, sizeof(buf), 0);
+        ssize_t n = recv(client_fd, chunk, sizeof(chunk), 0);
         if (n <= 0) break;   // 0 = clean close, <0 = error
-        send(client_fd, buf, n, 0);   // echo — RESP parser replaces this in Phase 1
+
+        buffer.append(chunk, n);
+        while (true) {
+            vector<string> cmd;
+            size_t consumed = 0;
+            ParseStatus status = parseCommand(buffer.data(), buffer.size(), cmd, consumed);
+            if (status == ParseStatus::INCOMPLETE) {
+                break;
+            }
+            if (status == ParseStatus::ERROR) {
+                send(client_fd, encodeError("ERR invalid command").data(), 27, 0);
+                buffer.clear(); // discard invalid data
+                break;
+            }
+
+            buffer.erase(0, consumed);
+            string reply = dispatch(cmd, store);
+            send(client_fd, reply.data(), reply.size(), 0);
+        }
+
+        // old
+        send(client_fd, chunk, n, 0);   // echo — RESP parser replaces this in Phase 1
     }
     std::cout << "Connection closed (fd=" << client_fd << ")\n";
 }

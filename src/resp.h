@@ -14,27 +14,19 @@ enum class ParseStatus {
 };
 
 //Looks at first byte and determines the type of RESP message, then parses accordingly
-ParseStatus parseCommand(const std::string& request, size_t &pos, std::vector<std::string>&out, size_t &consumed);
+ParseStatus parseCommand(const char* data, size_t len, std::vector<std::string>& out, size_t& consumed);
 
-std::string encodeSimpleString(const std::string& str) {
-    return "+" + str + "\r\n";
-}
+std::string encodeSimpleString(const std::string& str);
 
-std::string encodeError(const std::string& str) {
-    return "-" + str + "\r\n";
-}
+std::string encodeError(const std::string& str);
 
-std::string encodeBulkString(const std::string& str) {
-    return "$" + std::to_string(str.size()) + "\r\n" + str + "\r\n";
-}
+std::string encodeBulkString(const std::string& str);
 
-std::string encodeInteger(int64_t num) {
-    return ":" + std::to_string(num) + "\r\n";
-}
+std::string encodeInteger(int64_t num);
 
-std::string encodeBulkNullString() {
-    return "$-1\r\n";
-}
+std::string encodeBulkNullString();
+
+ParseStatus readLine(const char* data, size_t len, size_t& pos, std::string& line);
 
 
 

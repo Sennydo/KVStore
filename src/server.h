@@ -5,6 +5,7 @@
 #include <mutex>
 #include <condition_variable>
 #include <functional>
+#include "store.h"
 
 class Server {
 public:
@@ -27,6 +28,10 @@ private:
     std::condition_variable cv;
     bool stopping = false;
 
+    //Storage
+    Store store;
+
     void workerLoop();
     void submit(std::function<void()> task);
+    std::string dispatch(const std::vector<std::string>& cmd, Store& store);
 };
