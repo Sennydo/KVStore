@@ -18,6 +18,7 @@ add_executable(kvstore
     src/main.cpp
     src/server.cpp
     src/resp.cpp
+    src/store.cpp
 )
 
 target_include_directories(kvstore PRIVATE src)
@@ -29,6 +30,8 @@ enable_testing()
 add_executable(test_server
     tests/test_server.cpp
     src/server.cpp
+    src/resp.cpp
+    src/store.cpp
 )
 target_include_directories(test_server PRIVATE src)
 add_test(NAME server_tests COMMAND test_server)

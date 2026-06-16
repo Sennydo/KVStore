@@ -1,4 +1,5 @@
 #include <iostream>
+#include <csignal>
 #include "server.h"
 #include <nlohmann/json.hpp>
 using namespace std;
@@ -15,7 +16,9 @@ int main() {
         )");
     cout << ex1 << endl;
 
-    Server server(7789, 4);
+    signal(SIGPIPE, SIG_IGN);
+
+    Server server(6380, 4);
     server.start();
     return 0;
 }

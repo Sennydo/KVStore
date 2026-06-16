@@ -5,6 +5,7 @@
 #include <unistd.h>
 #include "resp.h"
 #include <cctype>
+#include <algorithm>
 using namespace std;
 
 Server::Server(int port, size_t numWorkers)
@@ -104,13 +105,16 @@ std::string Server::dispatch(const std::vector<std::string>& cmd, Store& store) 
         return encodeError("ERR empty command");
     }
 
-    // Placeholder: just echo the command back as a RESP array
     string op = cmd[0];
-    op[0] = toupper(static_cast<unsigned char>(op[0])); // case-insensitive command handling
+
+    // uppercase transform
+    std::transform(op.begin(), op.end(), op.begin(), [](unsigned char c) {
+        return std::toupper(c);
+    });
 
     if (op == "GET") {
         if (cmd.size() != 2) {
-            return encodeError("ERR wrong number of arguments for GET");
+            return encodeError("ERR wrong number of arguments for 'get' command");
         }
         auto val = store.get(cmd[1]);
         if (val) {
@@ -120,7 +124,7 @@ std::string Server::dispatch(const std::vector<std::string>& cmd, Store& store) 
     }
     else if (op == "SET") {
         if (cmd.size() != 3) {
-            return encodeError("ERR wrong number of arguments for SET");
+            return encodeError("ERR wrong number of arguments for 'set' command");
         }
         store.set(cmd[1], cmd[2]);
         return encodeSimpleString("OK");
@@ -128,7 +132,7 @@ std::string Server::dispatch(const std::vector<std::string>& cmd, Store& store) 
 
     else if (op == "DEL") {
         if (cmd.size() != 2) {
-            return encodeError("ERR wrong number of arguments for DEL");
+            return encodeError("ERR wrong number of arguments for 'del' command");
         }
         bool deleted = store.del(cmd[1]);
         return encodeInteger(deleted ? 1 : 0);
@@ -136,10 +140,12 @@ std::string Server::dispatch(const std::vector<std::string>& cmd, Store& store) 
 
     else if (op == "PING") {
         if (cmd.size() != 1) {
-            return encodeError("ERR wrong number of arguments for PING");
+            return encodeError("ERR wrong number of arguments for 'ping' command");
         }
         return encodeSimpleString("PONG");
     }
+
+    return encodeError("ERR unknown command " + cmd[0]);
 
 }
 
@@ -159,7 +165,9 @@ void Server::handleClient(int client_fd) {
                 break;
             }
             if (status == ParseStatus::ERROR) {
-                send(client_fd, encodeError("ERR invalid command").data(), 27, 0);
+                string errorMsg = encodeError("ERR invalid command");
+                send(client_fd, errorMsg.data(), errorMsg.size(), 0);
+                // instead of closing the connection, we discard and continue
                 buffer.clear(); // discard invalid data
                 break;
             }
@@ -169,8 +177,6 @@ void Server::handleClient(int client_fd) {
             send(client_fd, reply.data(), reply.size(), 0);
         }
 
-        // old
-        send(client_fd, chunk, n, 0);   // echo — RESP parser replaces this in Phase 1
     }
     std::cout << "Connection closed (fd=" << client_fd << ")\n";
 }
