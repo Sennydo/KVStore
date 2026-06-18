@@ -6,19 +6,12 @@ using namespace std;
 using json = nlohmann::json;
 
 int main() {
-    cout << "Hello, World!" << endl;
-
-    json ex1 = json::parse(R"(
-        {
-            "pi": 3.141,
-            "happy": true
-        }
-        )");
-    cout << ex1 << endl;
 
     signal(SIGPIPE, SIG_IGN);
 
-    Server server(6380, 4);
+    int workers = 200;
+
+    Server server(6380, workers);
     server.start();
     return 0;
 }

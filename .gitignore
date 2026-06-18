@@ -39,3 +39,7 @@ core
 .idea/
 cmake-build-*/
 .vs/
+
+#Extra
+findingdump.md
+notes.md
