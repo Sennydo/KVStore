@@ -4,34 +4,35 @@ project(kvstore VERSION 1.0.0 LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-include(FetchContent)
+# std::thread / std::shared_mutex need the system threading library (-pthread).
+find_package(Threads REQUIRED)
 
-FetchContent_Declare(
-    nlohmann_json
-    URL https://github.com/nlohmann/json/releases/download/v3.11.3/json.tar.xz
-    URL_HASH SHA256=d6c65aca6b1ed68e7a182f4757257b107ae403032760ed6ef121c9d55e81757d
-    DOWNLOAD_EXTRACT_TIMESTAMP TRUE
-)
-FetchContent_MakeAvailable(nlohmann_json)
-
-add_executable(kvstore
+# --- main server binary (README calls this ./build/kv) ---
+add_executable(kv
     src/main.cpp
     src/server.cpp
     src/resp.cpp
     src/store.cpp
 )
+target_include_directories(kv PRIVATE src)
+target_link_libraries(kv PRIVATE Threads::Threads)
 
-target_include_directories(kvstore PRIVATE src)
+# --- store microbenchmark ---
+# bench.cpp is self-contained (defines its own ShardedStore and main), so it
+# does not compile in the server/resp/store sources.
+add_executable(benchmark_store
+    tests/bench.cpp
+)
+target_link_libraries(benchmark_store PRIVATE Threads::Threads)
 
-target_link_libraries(kvstore PRIVATE nlohmann_json::nlohmann_json)
-
+# --- test suite ---
 enable_testing()
-
-add_executable(test_server
+add_executable(tests
     tests/test_server.cpp
     src/server.cpp
     src/resp.cpp
     src/store.cpp
 )
-target_include_directories(test_server PRIVATE src)
-add_test(NAME server_tests COMMAND test_server)
+target_include_directories(tests PRIVATE src)
+target_link_libraries(tests PRIVATE Threads::Threads)
+add_test(NAME server_tests COMMAND tests)

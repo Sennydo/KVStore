@@ -1,15 +1,13 @@
-#include <iostream>
 #include <csignal>
+#include <thread>
 #include "server.h"
-#include <nlohmann/json.hpp>
-using namespace std;
-using json = nlohmann::json;
 
 int main() {
 
     signal(SIGPIPE, SIG_IGN);
 
-    int workers = 200;
+    unsigned workers = std::thread::hardware_concurrency();
+    if (workers == 0) workers = 4;
 
     Server server(6380, workers);
     server.start();
